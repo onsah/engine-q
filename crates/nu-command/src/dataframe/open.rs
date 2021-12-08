@@ -7,7 +7,8 @@ use nu_protocol::{
 };
 use std::{fs::File, path::PathBuf};
 
-use polars::prelude::{CsvEncoding, CsvReader, JsonReader, ParquetReader, SerReader};
+// use polars::prelude::{CsvEncoding, CsvReader, JsonReader, ParquetReader, SerReader};
+use polars::prelude::{CsvEncoding, CsvReader, JsonReader, SerReader};
 
 #[derive(Clone)]
 pub struct OpenDataFrame;
@@ -90,7 +91,7 @@ fn command(
     match file.item.extension() {
         Some(e) => match e.to_str() {
             Some("csv") => from_csv(engine_state, stack, call),
-            Some("parquet") => from_parquet(engine_state, stack, call),
+            // Some("parquet") => from_parquet(engine_state, stack, call),
             Some("json") => from_json(engine_state, stack, call),
             _ => Err(ShellError::FileNotFoundCustom(
                 "Not a csv, parquet or json file".into(),
@@ -105,32 +106,32 @@ fn command(
     .map(|df| PipelineData::Value(NuDataFrame::dataframe_into_value(df, span), None))
 }
 
-fn from_parquet(
-    engine_state: &EngineState,
-    stack: &mut Stack,
-    call: &Call,
-) -> Result<polars::prelude::DataFrame, ShellError> {
-    let file: Spanned<PathBuf> = call.req(engine_state, stack, 0)?;
-    let columns: Option<Vec<String>> = call.get_flag(engine_state, stack, "columns")?;
+// fn from_parquet(
+//     engine_state: &EngineState,
+//     stack: &mut Stack,
+//     call: &Call,
+// ) -> Result<polars::prelude::DataFrame, ShellError> {
+//     let file: Spanned<PathBuf> = call.req(engine_state, stack, 0)?;
+//     let columns: Option<Vec<String>> = call.get_flag(engine_state, stack, "columns")?;
 
-    let r = File::open(&file.item).map_err(|e| {
-        ShellError::SpannedLabeledError("Error opening file".into(), e.to_string(), file.span)
-    })?;
-    let reader = ParquetReader::new(r);
+//     let r = File::open(&file.item).map_err(|e| {
+//         ShellError::SpannedLabeledError("Error opening file".into(), e.to_string(), file.span)
+//     })?;
+//     let reader = ParquetReader::new(r);
 
-    let reader = match columns {
-        None => reader,
-        Some(columns) => reader.with_columns(Some(columns)),
-    };
+//     let reader = match columns {
+//         None => reader,
+//         Some(columns) => reader.with_columns(Some(columns)),
+//     };
 
-    reader.finish().map_err(|e| {
-        ShellError::SpannedLabeledError(
-            "Parquet reader error".into(),
-            format!("{:?}", e),
-            call.head,
-        )
-    })
-}
+//     reader.finish().map_err(|e| {
+//         ShellError::SpannedLabeledError(
+//             "Parquet reader error".into(),
+//             format!("{:?}", e),
+//             call.head,
+//         )
+//     })
+// }
 
 fn from_json(
     engine_state: &EngineState,
@@ -210,7 +211,7 @@ fn from_csv(
 
     csv_reader.finish().map_err(|e| {
         ShellError::SpannedLabeledError(
-            "Parquet reader error".into(),
+            "Csv reader error".into(),
             format!("{:?}", e),
             call.head,
         )
