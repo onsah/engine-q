@@ -114,11 +114,12 @@ path."#
 }
 
 fn relative_to(path: &Path, span: Span, args: &Arguments) -> Value {
-    match path.strip_prefix(Path::new(&args.path.item)) {
-        Ok(p) => Value::string(p.to_string_lossy(), span),
-        Err(e) => Value::Error {
-            error: ShellError::CantConvert(e.to_string(), "string".into(), span),
-        },
+    if let Some(difference) = pathdiff::diff_paths(path, &args.path.item) {
+        Value::string(difference.to_string_lossy(), span)
+    } else {
+        Value::Error {
+            error: ShellError::FileNotFoundCustom("relative path for".into(), span),
+        }
     }
 }
 

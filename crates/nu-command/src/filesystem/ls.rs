@@ -64,14 +64,15 @@ impl Command for Ls {
 
         let call_span = call.head;
 
+        let cwd = current_dir(engine_state, stack)?;
+
         let (pattern, prefix) = if let Some(result) =
             call.opt::<Spanned<String>>(engine_state, stack, 0)?
         {
             let path = PathBuf::from(&result.item);
 
             let (mut path, prefix) = if path.is_relative() {
-                let cwd = current_dir(engine_state, stack)?;
-                (cwd.join(path), Some(cwd))
+                (cwd.join(path), Some(cwd.clone()))
             } else {
                 (path, None)
             };
@@ -106,8 +107,10 @@ impl Command for Ls {
 
             (path.to_string_lossy().to_string(), prefix)
         } else {
-            let cwd = current_dir(engine_state, stack)?;
-            (cwd.join("*").to_string_lossy().to_string(), Some(cwd))
+            (
+                cwd.join("*").to_string_lossy().to_string(),
+                Some(cwd.clone()),
+            )
         };
 
         let glob = glob::glob(&pattern).map_err(|err| {
@@ -141,14 +144,22 @@ impl Command for Ls {
                     }
 
                     let display_name = if short_names {
-                        path.file_name().and_then(|s| s.to_str())
+                        path.file_name().map(|s| s.to_string_lossy().to_string())
                     } else if let Some(pre) = &prefix {
-                        match path.strip_prefix(pre) {
-                            Ok(stripped) => stripped.to_str(),
-                            Err(_) => path.to_str(),
+                        Some(match path.strip_prefix(pre) {
+                            Ok(stripped) => stripped.to_string_lossy().to_string(),
+                            Err(_) => path.to_string_lossy().to_string(),
+                        })
+                    } else if let Some(diff) = pathdiff::diff_paths(&path, &cwd) {
+                        let diff = diff.to_string_lossy();
+                        let path = path.to_string_lossy().to_string();
+                        if diff.len() < path.len() {
+                            Some(diff.to_string())
+                        } else {
+                            Some(path)
                         }
                     } else {
-                        path.to_str()
+                        Some(path.to_string_lossy().to_string())
                     }
                     .ok_or_else(|| {
                         ShellError::SpannedLabeledError(
@@ -161,7 +172,7 @@ impl Command for Ls {
                     match display_name {
                         Ok(name) => {
                             let entry =
-                                dir_entry_dict(&path, name, metadata.as_ref(), call_span, long);
+                                dir_entry_dict(&path, &name, metadata.as_ref(), call_span, long);
 
                             match entry {
                                 Ok(value) => Some(value),
