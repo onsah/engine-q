@@ -189,6 +189,10 @@ pub enum ShellError {
     #[diagnostic(code(nu::shell::directory_not_found), url(docsrs))]
     DirectoryNotFound(#[label("directory not found")] Span),
 
+    #[error("Not a directory")]
+    #[diagnostic(code(nu::shell::not_a_directory), url(docsrs))]
+    NotADirectory(#[label("not a directory")] Span),
+
     #[error("Directory not found")]
     #[diagnostic(code(nu::shell::directory_not_found_custom), url(docsrs))]
     DirectoryNotFoundCustom(String, #[label("{0}")] Span),
